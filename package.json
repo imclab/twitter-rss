@@ -1,0 +1,33 @@
+{
+  "name": "TweetFeedRead",
+  "version": "0.0.1",
+  "description": "Read your Twitter timeline as an RSS-feed",
+
+  "keywords": [
+    "twitter",
+    "archive",
+    "rss",
+    "feed"
+  ],
+
+  "author": {
+    "name": "Philipp Kyeck",
+    "email": "philipp@beta-interactive.de",
+    "url":  "http://beta-interactive.de/"
+  },
+  "homepage": "http://tweetsy-east.rhcloud.com/",
+
+  "dependencies": {
+    "express": "3.x",
+    "oauth": "*",
+    "ejs": "*",
+    "ejs-locals": "*",
+    "mongoose": "*",
+    "cron": "*",
+    "async": "*",
+    "dateformat": "*",
+    "underscore": "*"
+  },
+
+  "main": "index.js"
+}

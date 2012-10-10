@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss xmlns:twitter="http://api.twitter.com" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:georss="http://www.georss.org/georss" version="2.0">
+<channel>
+    <title>Twitter / <%= user.screenname %></title>
+    <link>https://twitter.com/<%= user.screenname %></link>
+    <description>Twitter timeline from <%= user.screenname %>.</description>
+    <language>en-us</language>
+    <ttl>40</ttl>
+<% for (var i in tweets) { %>
+    <item>
+        <title><![CDATA[<%= tweets[i].user.name + ' &mdash; ' + tweets[i].text.replace(/\n/g, ' ') %>]]></title>
+        <description><![CDATA[<%- tweets[i].text.replace(/\n/g, '<br>') %>]]></description>
+        <pubDate><%= tweets[i].created_at.toUTCString() %></pubDate>
+        <guid>https://twitter.com/<%= tweets[i].user.screen_name %>/status/<%= tweets[i].id %></guid>
+        <link>https://twitter.com/<%= tweets[i].user.screen_name %>/status/<%= tweets[i].id %></link>
+    </item>
+<% } %>
+</channel>
+</rss>
