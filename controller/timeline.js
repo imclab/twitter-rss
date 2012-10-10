@@ -98,12 +98,17 @@ module.exports = function(oa) {
                     res.send(404, 'Sorry, we cannot find that!');
                 }
                 else {
-                    if (user !== null) {
+                    if (user !== null &&
+                        user.timeline &&
+                        user.timeline.length > 0
+                    ) {
                         ids = [];
                         l = user.timeline.length;
-                        i = (l < 200) ? 0 : user.timeline.length-200;
-                        for (;i<l;++i) {
+                        i = l-1;
+                        l = (l < 200) ? 0 : l-200; // max 200 tweets
+                        while (i>l) {
                             ids.push(user.timeline[i].tweet_id);
+                            --i;
                         }
 
                         Tweet.find(
