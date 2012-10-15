@@ -9,7 +9,7 @@ module.exports = function(oa) {
         twitterAuth: function(req, res) {
             oa.getOAuthRequestToken(function (error, oauth_token, oauth_token_secret, results){
                 if (error) {
-                    console.error(error);
+                    console.error(new Date(), error);
                     res.send(404, "yeah no. didn't work.");
                 }
                 else {
@@ -31,7 +31,7 @@ module.exports = function(oa) {
                     req.session.oauth.verifier,
                     function (error, oauth_access_token, oauth_access_token_secret, results) {
                         if (error) {
-                            console.error(error);
+                            console.error(new Date(), error);
                             res.send(404, "something broke.");
                         }
                         else {
@@ -40,7 +40,7 @@ module.exports = function(oa) {
 
                             User.findOne({id:results.user_id}, function (err, user) {
                                 if (typeof user === 'undefined' || user === null) {
-                                    console.log("user not found");
+                                    console.log("user not found -> " + results.screen_name);
                                     user = new User({
                                         id: parseInt(results.user_id, 10),
                                         screenname: results.screen_name,
@@ -49,7 +49,7 @@ module.exports = function(oa) {
                                     });
                                 }
                                 else {
-                                    console.log("1) user found");
+                                    console.log("1) user found -> " + results.screen_name);
 
                                     // update token
                                     user.oauth_token = oauth_access_token;
@@ -61,7 +61,7 @@ module.exports = function(oa) {
 
                                 user.save(function (err2) {
                                     if (err2) {
-                                        console.error("error while trying to save new user to DB :: ", err2);
+                                        console.error(new Date(), "error while trying to save new user to DB :: ", err2);
                                     }
                                     res.redirect('/');
                                 });
