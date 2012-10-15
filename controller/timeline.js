@@ -85,8 +85,11 @@ module.exports = function(oa) {
 
     var saveTweetsToUser = function(tweets, user) {
         async.forEachSeries(tweets, function (tweetData, cb) {
-            var tweet = {
-                id: tweetData.id_str,
+            var tweet,
+                retweet_user;
+
+            tweet = {
+                id: tweetData.id,
                 created_at: tweetData.created_at,
                 text: tweetData.text,
                 entities: tweetData.entities,
@@ -97,12 +100,23 @@ module.exports = function(oa) {
                 }
             };
 
+            tweet.retweet = false;
+            if (typeof tweetData.retweeted_status !== 'undefined') {
+                tweet.retweet = true;
+                retweet_user = tweetData.retweeted_status.user;
+                tweet.retweet_user = {
+                    name: retweet_user.name,
+                    screen_name: retweet_user.screen_name,
+                    profile_image_url: retweet_user.profile_image_url
+                };
+            }
+
             Tweet.update({id: tweet.id}, tweet, {upsert: true}, function (err) {
                 var i, l, t,
                     found = false;
 
                 if (err) {
-                    console.error(err);
+                    console.error(new Date(), err);
                 }
                 else {
                     // TODO: speed up search (binary?!)
@@ -128,12 +142,12 @@ module.exports = function(oa) {
 
         }, function (err) {
             if (err) {
-                console.error(err);
+                console.error(new Date(), err);
             }
             else {
                 user.save(function(err2) {
                     if (err2) {
-                        console.error(user.screenname, err2);
+                        console.error(new Date(), user.screenname, err2);
                     }
                 });
             }
@@ -154,7 +168,7 @@ module.exports = function(oa) {
 
             oa.get(url, user.oauth_token, user.oauth_secret, function (error, data) {
                 if (error) {
-                    console.error('error', user.screenname, error);
+                    console.error('error', new Date(), user.screenname, error);
                 }
                 else {
                     // replace 'type' with 'media_type' otherwise conflicts w/ mongoose
@@ -211,7 +225,7 @@ module.exports = function(oa) {
                                 ids.push(id);
                                 --i;
                                 if (i < 0) {
-                                    console.error("GReader index out of bounds...", lastGReaderTweet);
+                                    console.error(new Date(), "GReader index out of bounds...", lastGReaderTweet);
                                     break;
                                 }
                             } while (id > lastGReaderTweet);
@@ -225,7 +239,7 @@ module.exports = function(oa) {
                                 var i, l;
 
                                 if (err) {
-                                    console.error(err);
+                                    console.error(new Date(), err);
                                 }
                                 else {
                                     // replace URLs/MENTIONs/MEDIA
