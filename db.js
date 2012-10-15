@@ -17,7 +17,7 @@ var userSchema = new mongoose.Schema({
 });
 
 var tweetSchema = new mongoose.Schema({
-    id: {type: String, unique: true},
+    id: {type: Number, unique: true},
     created_at: Date,
     text: String,
     entities: {
@@ -46,7 +46,12 @@ var tweetSchema = new mongoose.Schema({
         }]
     },
     user: {
-        id: Number,
+        name: String,
+        screen_name: String,
+        profile_image_url: String
+    },
+    retweet: Boolean,
+    retweet_user: {
         name: String,
         screen_name: String,
         profile_image_url: String
