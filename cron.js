@@ -17,24 +17,24 @@ module.exports = function (oa, timeline) {
                         stop;
 
                     start = new Date();
-                    console.log("cron start " + start);
-
                     User.find({}, function (err, users) {
                         if (err) {
                             console.error(err);
                         }
                         if (users && users.length > 0) {
-                            console.log("Users found: ", users.length);
                             async.forEachSeries(
                                 users,
                                 timeline.getHomeTimeline,
                                 function (err2) {
+                                    var debug;
                                     if (err2) {
                                         console.error(err2);
                                     }
                                     stop = new Date();
-                                    console.log("cron done " + stop);
-                                    console.log("duration: " + (stop-start));
+                                    debug = 'cron done -> ' + stop + ' -> ';
+                                    debug += users.length + ' users found -> ';
+                                    debug += 'took ' + (stop-start) + 'ms';
+                                    console.log(debug);
                                 }
                             );
                         }
