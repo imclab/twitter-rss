@@ -12,7 +12,8 @@ var userSchema = new mongoose.Schema({
     timeline: [{
         tweet_id: {type: String, unique: true},
         tweet_time: Date
-    }]
+    }],
+    lastGReaderTweet: Number
 });
 
 var tweetSchema = new mongoose.Schema({
@@ -37,14 +38,11 @@ var tweetSchema = new mongoose.Schema({
             screen_name: String
         }],
         media: [{
-            id: Number,
             indices: [Number],
             media_url: String,
             media_url_https: String,
-            url: String,
             display_url: String,
-            expanded_url: String,
-            type: String
+            media_type: String
         }]
     },
     user: {

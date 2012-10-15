@@ -8,8 +8,8 @@
     <ttl>40</ttl>
 <% for (var i in tweets) { %>
     <item>
-        <title><![CDATA[<%= tweets[i].user.name + ' &mdash; ' + tweets[i].text.replace(/\n/g, ' ') %>]]></title>
-        <description><![CDATA[<%- tweets[i].text.replace(/\n/g, '<br>') %>]]></description>
+        <title><![CDATA[<%= tweets[i].user.name + ' &mdash; ' + tweets[i].title %>]]></title>
+        <description><![CDATA[<%- tweets[i].html %>]]></description>
         <pubDate><%= tweets[i].created_at.toUTCString() %></pubDate>
         <guid>https://twitter.com/<%= tweets[i].user.screen_name %>/status/<%= tweets[i].id %></guid>
         <link>https://twitter.com/<%= tweets[i].user.screen_name %>/status/<%= tweets[i].id %></link>

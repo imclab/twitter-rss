@@ -8,7 +8,82 @@ module.exports = function(oa) {
         User = db.User,
         Tweet = db.Tweet;
 
-    function saveTweetsToUser(tweets, user) {
+    var formatTweet = function(tweet) {
+        var i, l,
+            url, user, media,
+            r, replaces = [],
+            html, title;
+
+        html = title = tweet.text;
+
+        if (tweet.entities.urls.length > 0) {
+            for (i=0,l=tweet.entities.urls.length;i<l;++i) {
+                url = tweet.entities.urls[i];
+                replaces.push({
+                    type: 'url',
+                    start: url.indices[0],
+                    end: url.indices[1],
+                    content: url.expanded_url,
+                    html: '<a href="'+url.expanded_url+'">'+url.expanded_url+'</a>'
+                });
+            }
+        }
+        if (tweet.entities.user_mentions.length > 0) {
+            for (i=0,l=tweet.entities.user_mentions.length;i<l;++i) {
+                user = tweet.entities.user_mentions[i];
+                replaces.push({
+                    type: 'user',
+                    start: user.indices[0],
+                    end: user.indices[1],
+                    content: '@'+user.screen_name,
+                    html: '<a href="https://twitter.com/'+user.screen_name+'">@'+user.screen_name+'</a>'
+                });
+            }
+        }
+        if (tweet.entities.media && tweet.entities.media.length > 0) {
+            for (i=0,l=tweet.entities.media.length;i<l;++i) {
+                media = tweet.entities.media[i];
+                if (media.media_type === 'photo') {
+                    replaces.push({
+                        type: 'photo',
+                        start: media.indices[0],
+                        end: media.indices[1],
+                        content: media.media_url,
+                        html: '<img src="'+media.media_url+'">'
+                    });
+                }
+            }
+        }
+
+        // sort replaces DESC
+        replaces.sort(function (a, b) {
+            return b.start - a.start;
+        });
+
+        // replacing...
+        for (i=0,l=replaces.length;i<l;++i) {
+            r = replaces[i];
+            html = insertSubstring(html, r.start, r.end, r.html);
+            // for tweet's title only replace URLs
+            if (r.type === 'url') {
+                title = insertSubstring(title, r.start, r.end, r.content);
+            }
+        }
+
+        html.replace(/\n/g, '<br>');
+        tweet.html = html;
+
+        title.replace(/\n/g, ' ');
+        tweet.title = title;
+
+        return tweet;
+    };
+
+    var insertSubstring = function(str, start, end, s) {
+        return str.slice(0, start) + s + str.slice(end);
+    };
+
+    var saveTweetsToUser = function(tweets, user) {
         async.forEachSeries(tweets, function (tweetData, cb) {
             var tweet = {
                 id: tweetData.id_str,
@@ -30,7 +105,7 @@ module.exports = function(oa) {
                     console.error(err);
                 }
                 else {
-                    // TODO: speed up search
+                    // TODO: speed up search (binary?!)
                     i = user.timeline.length-1;
                     while (i>0) {
                         t = user.timeline[i];
@@ -63,8 +138,10 @@ module.exports = function(oa) {
                 });
             }
         });
-    }
+    };
 
+
+    // public methods
     return {
         getHomeTimeline: function(user, callback) {
             var url = 'https://api.twitter.com/1.1/statuses/home_timeline.json',
@@ -77,9 +154,11 @@ module.exports = function(oa) {
 
             oa.get(url, user.oauth_token, user.oauth_secret, function (error, data) {
                 if (error) {
-                    console.error('error', user.screenname, error.toString());
+                    console.error('error', user.screenname, error);
                 }
                 else {
+                    // replace 'type' with 'media_type' otherwise conflicts w/ mongoose
+                    data = data.replace(/"type":/g, '"media_type":');
                     // parse and save data to DB
                     data = JSON.parse(data);
                     data.reverse();
@@ -91,9 +170,14 @@ module.exports = function(oa) {
         },
 
         getUserFeed: function(req, res, next) {
-            var userId = req.params.userid;
+            var userId = req.params.userid,
+                userAgent = req.headers['user-agent'];
+            console.log('getUserFeed() :: User-Agent: ' + userAgent);
+
             User.findOne({id: userId}, function (err, user) {
-                var i, l, ids;
+                var i, l, ids, id,
+                    lastGReaderTweet, lastTweet;
+
                 if (err) {
                     res.send(404, 'Sorry, we cannot find that!');
                 }
@@ -102,13 +186,35 @@ module.exports = function(oa) {
                         user.timeline &&
                         user.timeline.length > 0
                     ) {
+                        lastGReaderTweet = user.lastGReaderTweet;
+                        // check if google reader
+                        if (userAgent.indexOf('Feedfetcher-Google') !== -1) {
+                            lastTweet = user.timeline[user.timeline.length-1];
+                            user.lastGReaderTweet = lastTweet.id;
+                            user.save();
+                        }
+
                         ids = [];
-                        l = user.timeline.length;
-                        i = l-1;
-                        l = (l < 200) ? 0 : l-200; // max 200 tweets
-                        while (i>l) {
-                            ids.push(user.timeline[i].tweet_id);
-                            --i;
+                        if (typeof lastGReaderTweet === 'undefined') {
+                            l = user.timeline.length;
+                            i = l-1;
+                            l = (l < 50) ? 0 : l-50; // max 50 tweets
+                            while (i>l) {
+                                ids.push(user.timeline[i].tweet_id);
+                                --i;
+                            }
+                        }
+                        else {
+                            i = user.timeline.length-1;
+                            do {
+                                id = user.timeline[i].tweet_id;
+                                ids.push(id);
+                                --i;
+                                if (i < 0) {
+                                    console.error("GReader index out of bounds...", lastGReaderTweet);
+                                    break;
+                                }
+                            } while (id > lastGReaderTweet);
                         }
 
                         Tweet.find(
@@ -116,10 +222,17 @@ module.exports = function(oa) {
                             null,
                             {sort: {created_at: -1}},
                             function (err, tweets) {
+                                var i, l;
+
                                 if (err) {
                                     console.error(err);
                                 }
                                 else {
+                                    // replace URLs/MENTIONs/MEDIA
+                                    for (i=0,l=tweets.length;i<l;++i) {
+                                        tweets[i] = formatTweet(tweets[i]);
+                                    }
+
                                     res.render('rss', {
                                         user: user,
                                         tweets: tweets,
