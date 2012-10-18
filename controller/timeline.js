@@ -203,9 +203,8 @@ module.exports = function(oa) {
                         lastGReaderTweet = user.lastGReaderTweet;
                         // check if google reader
                         if (userAgent.indexOf('Feedfetcher-Google') !== -1) {
-                        //if (userAgent.indexOf('Mozilla/5.0') !== -1) {
                             lastTweet = user.timeline[user.timeline.length-1];
-                            user.lastGReaderTweet = lastTweet.id;
+                            user.lastGReaderTweet = lastTweet.tweet_id;
                             user.save(function (err) {
                                 console.error(new Date(), 'Error update GReaderTweet', err);
                             });
