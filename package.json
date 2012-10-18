@@ -23,6 +23,7 @@
     "ejs": "*",
     "ejs-locals": "*",
     "mongoose": "*",
+    "mongoose-long": "*",
     "cron": "*",
     "async": "*",
     "dateformat": "*",

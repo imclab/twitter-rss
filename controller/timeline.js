@@ -49,7 +49,7 @@ module.exports = function(oa) {
                         start: media.indices[0],
                         end: media.indices[1],
                         content: media.media_url,
-                        html: '<img src="'+media.media_url+'">'
+                        html: '<p><img src="'+media.media_url+'"></p>'
                     });
                 }
             }
@@ -97,10 +97,10 @@ module.exports = function(oa) {
                     name: tweetData.user.name,
                     screen_name: tweetData.user.screen_name,
                     profile_image_url: tweetData.user.profile_image_url
-                }
+                },
+                retweet: false
             };
 
-            tweet.retweet = false;
             if (typeof tweetData.retweeted_status !== 'undefined') {
                 tweet.retweet = true;
                 retweet_user = tweetData.retweeted_status.user;
@@ -142,7 +142,7 @@ module.exports = function(oa) {
 
         }, function (err) {
             if (err) {
-                console.error(new Date(), err);
+                console.error(new Date(), "AsyncResult >>> ", err);
             }
             else {
                 user.save(function(err2) {
@@ -168,7 +168,7 @@ module.exports = function(oa) {
 
             oa.get(url, user.oauth_token, user.oauth_secret, function (error, data) {
                 if (error) {
-                    console.error('error', new Date(), user.screenname, error);
+                    console.error(new Date(), user.screenname, error);
                 }
                 else {
                     // replace 'type' with 'media_type' otherwise conflicts w/ mongoose
@@ -203,13 +203,16 @@ module.exports = function(oa) {
                         lastGReaderTweet = user.lastGReaderTweet;
                         // check if google reader
                         if (userAgent.indexOf('Feedfetcher-Google') !== -1) {
+                        //if (userAgent.indexOf('Mozilla/5.0') !== -1) {
                             lastTweet = user.timeline[user.timeline.length-1];
                             user.lastGReaderTweet = lastTweet.id;
-                            user.save();
+                            user.save(function (err) {
+                                console.error(new Date(), 'Error update GReaderTweet', err);
+                            });
                         }
 
                         ids = [];
-                        if (typeof lastGReaderTweet === 'undefined') {
+                        if (lastGReaderTweet <= 0) {
                             l = user.timeline.length;
                             i = l-1;
                             l = (l < 50) ? 0 : l-50; // max 50 tweets

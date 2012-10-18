@@ -45,7 +45,8 @@ module.exports = function(oa) {
                                         id: parseInt(results.user_id, 10),
                                         screenname: results.screen_name,
                                         oauth_token: oauth_access_token,
-                                        oauth_secret: oauth_access_token_secret
+                                        oauth_secret: oauth_access_token_secret,
+                                        lastGReaderTweet: 0
                                     });
                                 }
                                 else {

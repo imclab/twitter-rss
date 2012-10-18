@@ -2,22 +2,28 @@
 "use strict";
 
 var mongoose = require('mongoose');
+require('mongoose-long')(mongoose);
+
 var ObjectId = mongoose.Schema.Types.ObjectId;
+var Long = mongoose.Schema.Types.Long;
+
+// different Long for working w/ Longs
+exports.Long = mongoose.Types.Long;
 
 var userSchema = new mongoose.Schema({
-    id: {type: Number, unique: true},
+    id: {type: Long, unique: true},
     screenname: String,
     oauth_token: String,
     oauth_secret: String,
     timeline: [{
-        tweet_id: {type: String, unique: true},
+        tweet_id: {type: Long, unique: true},
         tweet_time: Date
     }],
-    lastGReaderTweet: Number
+    lastGReaderTweet: Long
 });
 
 var tweetSchema = new mongoose.Schema({
-    id: {type: Number, unique: true},
+    id: {type: Long, unique: true},
     created_at: Date,
     text: String,
     entities: {
