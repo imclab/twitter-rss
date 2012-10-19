@@ -123,7 +123,7 @@ module.exports = function(oa) {
                     i = user.timeline.length-1;
                     while (i>0) {
                         t = user.timeline[i];
-                        if (t.tweet_id === tweet.id) {
+                        if (t.tweet_id == tweet.id) {
                             found = true;
                             break;
                         }
