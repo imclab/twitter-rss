@@ -206,7 +206,13 @@ module.exports = function(oa) {
                             lastTweet = user.timeline[user.timeline.length-1];
                             user.lastGReaderTweet = lastTweet.tweet_id;
                             user.save(function (err) {
-                                console.error(new Date(), 'Error update GReaderTweet', err);
+                                if (err) {
+                                    console.error(
+                                        new Date(),
+                                        'Error update GReaderTweet',
+                                        err
+                                    );
+                                }
                             });
                         }
 
