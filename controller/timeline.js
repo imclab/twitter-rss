@@ -84,12 +84,14 @@ module.exports = function(oa) {
     };
 
     var saveTweetsToUser = function(tweets, user) {
+        var addedTweet = false;
+        // iterate over every tweet and check if it's new
         async.forEachSeries(tweets, function (tweetData, cb) {
             var tweet,
                 retweet_user;
 
             tweet = {
-                id: tweetData.id,
+                id: db.Long.fromString(tweetData.id_str),
                 created_at: tweetData.created_at,
                 text: tweetData.text,
                 entities: tweetData.entities,
@@ -111,46 +113,59 @@ module.exports = function(oa) {
                 };
             }
 
-            Tweet.update({id: tweet.id}, tweet, {upsert: true}, function (err) {
+            Tweet.update({id: tweet.id}, tweet, {upsert: true}, function (error) {
                 var i, l, t,
                     found = false;
 
-                if (err) {
-                    console.error(new Date(), err);
+                if (error) {
+                    console.error(new Date(), error);
                 }
                 else {
                     // TODO: speed up search (binary?!)
                     i = user.timeline.length-1;
                     while (i>0) {
                         t = user.timeline[i];
-                        if (t.tweet_id === tweet.id) {
+                        if (t.tweet_id.equals(tweet.id)) {
                             found = true;
+                            break;
+                        }
+                        else if (t.tweet_id.lessThan(tweet.id)) {
+                            // break because tweet_id from timeline-tweet is
+                            // older than the ID from the tweet we're looking for
                             break;
                         }
                         --i;
                     }
 
                     if (!found) {
-                        console.log(user.screenname, "push", tweet.id);
+                        console.log(user.screenname, "push " + tweet.id, tweet.created_at);
                         user.timeline.push({'tweet_id': tweet.id, 'tweet_time': tweet.created_at});
+                        addedTweet = true;
                     }
                 }
 
                 cb(null);
                 tweet = null;
+                retweet_user = null;
             });
 
-        }, function (err) {
-            if (err) {
-                console.error(new Date(), "AsyncResult >>> ", err);
+        }, function (errorAsync) {
+            if (errorAsync) {
+                console.error(new Date(), "AsyncResult >>> ", errorAsync);
             }
-            else {
-                user.save(function(err2) {
-                    if (err2) {
-                        console.error(new Date(), user.screenname, err2);
+
+            if (addedTweet) {
+                // save user regardless of occuring error
+                user.save(function(errorSave) {
+                    if (errorSave) {
+                        console.error(new Date(), user.screenname, errorSave);
+                    }
+                    else {
+                        console.log("user updated ... " + user.screenname);
                     }
                 });
             }
+
         });
     };
 
@@ -165,6 +180,8 @@ module.exports = function(oa) {
                 lastTweet = user.timeline[user.timeline.length-1];
                 url += '?since_id=' + lastTweet.tweet_id;
             }
+
+            console.log(user.screenname, "getHomeTimeline() " + url, lastTweet.tweet_time);
 
             oa.get(url, user.oauth_token, user.oauth_secret, function (error, data) {
                 if (error) {
@@ -206,7 +223,13 @@ module.exports = function(oa) {
                             lastTweet = user.timeline[user.timeline.length-1];
                             user.lastGReaderTweet = lastTweet.tweet_id;
                             user.save(function (err) {
-                                console.error(new Date(), 'Error update GReaderTweet', err);
+                                if (err) {
+                                    console.error(
+                                        new Date(),
+                                        'Error update GReaderTweet',
+                                        err
+                                    );
+                                }
                             });
                         }
 
