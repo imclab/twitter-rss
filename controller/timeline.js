@@ -13,7 +13,7 @@ module.exports = function(oa) {
             url, user, media,
             r, replaces = [],
             html, title,
-            instagramRegex = /http:\/\/instagr.am\/p\/([A-Za-z0-9]+)\//g,
+            instagramRgx = /http:\/\/(instagr\.am|instagram\.com)\/p\/([A-Za-z0-9]+)\//g,
             match, temp;
 
         html = title = tweet.text;
@@ -31,7 +31,7 @@ module.exports = function(oa) {
                 };
 
                 // look for instagram URLs like e.g. http://instagr.am/p/<ID>/
-                match = instagramRegex.exec(url.expanded_url);
+                match = instagramRgx.exec(url.expanded_url);
                 if (match !== null) {
                     temp.html = '<p><img src="http://instagr.am/p/'+match[1]+'/media/?size=l"></p>';
                 }
