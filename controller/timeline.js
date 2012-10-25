@@ -12,20 +12,31 @@ module.exports = function(oa) {
         var i, l,
             url, user, media,
             r, replaces = [],
-            html, title;
+            html, title,
+            instagramRegex = /http:\/\/instagr.am\/p\/([A-Za-z0-9]+)\//g,
+            match, temp;
 
         html = title = tweet.text;
 
         if (tweet.entities.urls.length > 0) {
             for (i=0,l=tweet.entities.urls.length;i<l;++i) {
                 url = tweet.entities.urls[i];
-                replaces.push({
+
+                temp = {
                     type: 'url',
                     start: url.indices[0],
                     end: url.indices[1],
                     content: url.expanded_url,
                     html: '<a href="'+url.expanded_url+'">'+url.expanded_url+'</a>'
-                });
+                };
+
+                // look for instagram URLs like e.g. http://instagr.am/p/<ID>/
+                match = instagramRegex.exec(url.expanded_url);
+                if (match !== null) {
+                    temp.html = '<p><img src="http://instagr.am/p/'+match[1]+'/media/?size=l"></p>';
+                }
+
+                replaces.push(temp);
             }
         }
         if (tweet.entities.user_mentions.length > 0) {
