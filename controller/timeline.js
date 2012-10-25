@@ -33,7 +33,7 @@ module.exports = function(oa) {
                 // look for instagram URLs like e.g. http://instagr.am/p/<ID>/
                 match = instagramRgx.exec(url.expanded_url);
                 if (match !== null) {
-                    temp.html = '<p><img src="http://instagr.am/p/'+match[1]+'/media/?size=l"></p>';
+                    temp.html = '<p><img src="http://instagr.am/p/'+match[2]+'/media/?size=l"></p>';
                 }
 
                 replaces.push(temp);
