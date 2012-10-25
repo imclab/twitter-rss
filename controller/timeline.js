@@ -94,10 +94,10 @@ module.exports = function(oa) {
         return str.slice(0, start) + s + str.slice(end);
     };
 
-    var saveTweetsToUser = function(tweets, user) {
+    var saveTweetsToUser = function(tweets, user, callback) {
         var addedTweet = false;
         // iterate over every tweet and check if it's new
-        async.forEachSeries(tweets, function (tweetData, cb) {
+        async.forEachSeries(tweets, function (tweetData, asyncCallback) {
             var tweet,
                 retweet_user;
 
@@ -155,7 +155,7 @@ module.exports = function(oa) {
                     }
                 }
 
-                cb(null);
+                asyncCallback(null);
                 tweet = null;
                 retweet_user = null;
             });
@@ -174,6 +174,7 @@ module.exports = function(oa) {
                     else {
                         console.log("user updated ... " + user.screenname);
                     }
+                    callback();
                 });
             }
 
@@ -204,10 +205,11 @@ module.exports = function(oa) {
                     // parse and save data to DB
                     data = JSON.parse(data);
                     data.reverse();
-                    saveTweetsToUser(data, user);
+                    saveTweetsToUser(data, user, function () {
+                        // tell cron to fetch next user from twitter
+                        callback(null);
+                    });
                 }
-                // tell cron to fetch next user from twitter
-                callback(null);
             });
         },
 
