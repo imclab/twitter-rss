@@ -13,7 +13,7 @@ module.exports = function(oa) {
             url, user, media,
             r, replaces = [],
             html, title,
-            instagramRgx = /http:\/\/(instagr\.am|instagram\.com)\/p\/([A-Za-z0-9]+)\//g,
+            instagramRgx = /http:\/\/(instagr\.am|instagram\.com)\/p\/([A-Za-z0-9\-]+)\//g,
             match, temp;
 
         html = title = tweet.text;
