@@ -43,7 +43,7 @@ module.exports = function (api) {
     return {
         init: function() {
             var job = new CronJob(
-                '*/1 * * * *',
+                '*/2 * * * *',
                 run,
                 function () {/* This function is executed when the job stops */},
                 true /* Start the job right now */
