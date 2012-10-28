@@ -1,13 +1,15 @@
+/*jslint node: true */
+"use strict";
+
 var formatTweet = exports.formatTweet = function(tweet) {
     var i, l,
         url, user, media,
         r, replaces = [],
         html, title,
-        // TODO: check for https ?
-        instagramRgx = /http:\/\/(instagr\.am|instagram\.com)\/p\/([A-Za-z0-9\-_]+)\//g,
-        // TODO: test this
-        imageRgx = /(https?:)?\/\/?[^\'"<>]+?\.(jpg|jpeg|gif|png)/g,
-        match, temp;
+        instagramRgx = /(https?:\/\/)?(instagr)(\.am|am\.com)\/p\/([\w\-_]+)\//gi,
+        imageRgx = /(https?:\/\/)?((www\.)?[\w\-_\.]+\.[a-z]+\/((([\w\-_\/]+)\/)?[\w\-_\.]+\.(png|gif|jpe?g)))/gi,
+        match, temp,
+        imageUrl, images = [];
 
     html = title = tweet.text;
 
@@ -27,6 +29,14 @@ var formatTweet = exports.formatTweet = function(tweet) {
             match = instagramRgx.exec(url.expanded_url);
             if (match !== null) {
                 temp.html = '<p><img src="http://instagr.am/p/'+match[2]+'/media/?size=l"></p>';
+            }
+
+            // look for linked images
+            match = imageRgx.exec(url.expanded_url);
+            if (match !== null) {
+                imageUrl = (match[1]) ? match[1] : 'http://';
+                imageUrl += match[2];
+                images.push('<img src="' + imageUrl + '">');
             }
 
             replaces.push(temp);
@@ -76,6 +86,15 @@ var formatTweet = exports.formatTweet = function(tweet) {
 
     html.replace(/\n/g, '<br>');
     tweet.html = html;
+
+    // add images underneath tweet text
+    if (images.length > 0) {
+        tweet.html += '<p>';
+        for (i=0,l=images.length;i<l;++i) {
+            tweet.html += images[i];
+        }
+        tweet.html += '</p>';
+    }
 
     title.replace(/\n/g, ' ');
     tweet.title = title;

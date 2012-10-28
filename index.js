@@ -1,7 +1,6 @@
 /*jslint node: true */
 "use strict";
 
-
 var express = require('express');
 var engine = require('ejs-locals'); // needed to use layout.ejs in express 3.x
 var app = express();
@@ -37,8 +36,9 @@ function initApplication() {
 
     app.use(express.bodyParser());
     app.use(express.cookieParser(config.app.cookie.secret));
-    // view helpers
+    // locals
     app.use(function(req, res, next) {
+        // view helpers
         res.locals.formatTweet = helper.formatTweet;
         next();
     });

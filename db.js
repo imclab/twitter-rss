@@ -17,7 +17,6 @@ var userSchema = new mongoose.Schema({
     oauth_secret: String,
     timeline: [{
         tweet_id: {type: Long, unique: true}
-        //tweet_time: Date
     }],
     lastGReaderTweet: Long
 });

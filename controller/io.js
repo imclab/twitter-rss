@@ -14,23 +14,23 @@ var q = async.queue(function (task, callback) {
 var getUserFeed = function(req, res, next) {
     var userId = req.params.userid,
         userAgent = req.headers['user-agent'];
-    console.log('getUserFeed() :: User-Agent: ' + userAgent);
 
     User.findOne({id: userId}, function (err, user) {
         var i, l, ids, id,
-            lastGReaderTweet, lastTweet;
+            lastGReaderTweet, lastTweet,
+            isFeedfetcher = false;
 
         if (err) {
             res.send(404, 'Sorry, we cannot find that!');
         }
         else {
-            if (user !== null &&
-                user.timeline &&
-                user.timeline.length > 0
-            ) {
+            if (user !== null && user.timeline && user.timeline.length > 0) {
                 lastGReaderTweet = user.lastGReaderTweet;
-                // check if google reader
-                if (userAgent.indexOf('Feedfetcher-Google') !== -1) {
+
+                // check if google reader feedfetcher
+                isFeedfetcher = userAgent.indexOf('Feedfetcher-Google') !== -1;
+                if (isFeedfetcher) {
+                    console.log(new Date(), 'getUserFeed() Google Feedfetcher');
                     lastTweet = user.timeline[user.timeline.length-1];
                     user.lastGReaderTweet = lastTweet.tweet_id;
                     user.save(function (err) {
@@ -45,7 +45,23 @@ var getUserFeed = function(req, res, next) {
                 }
 
                 ids = [];
-                if (lastGReaderTweet <= 0) {
+                if (isFeedfetcher && lastGReaderTweet > 0) {
+                    i = user.timeline.length-1;
+                    do {
+                        id = user.timeline[i].tweet_id;
+                        ids.push(id);
+                        --i;
+                        if (i < 0) {
+                            console.error(
+                                new Date(),
+                                "GReader index out of bounds...",
+                                lastGReaderTweet
+                            );
+                            break;
+                        }
+                    } while (id > lastGReaderTweet);
+                }
+                else {
                     l = user.timeline.length;
                     i = l-1;
                     l = (l < 50) ? 0 : l-50; // max 50 tweets
@@ -54,26 +70,12 @@ var getUserFeed = function(req, res, next) {
                         --i;
                     }
                 }
-                else {
-                    i = user.timeline.length-1;
-                    do {
-                        id = user.timeline[i].tweet_id;
-                        ids.push(id);
-                        --i;
-                        if (i < 0) {
-                            console.error(new Date(), "GReader index out of bounds...", lastGReaderTweet);
-                            break;
-                        }
-                    } while (id > lastGReaderTweet);
-                }
 
                 Tweet.find(
                     {'id': { $in: ids}},
                     null,
                     {sort: {created_at: -1}},
                     function (err, tweets) {
-                        var i, l;
-
                         if (err) {
                             console.error(new Date(), err);
                         }
@@ -85,6 +87,8 @@ var getUserFeed = function(req, res, next) {
                             });
                         }
                         ids = null;
+                        lastTweet = null;
+                        lastGReaderTweet = null;
                     }
                 );
             }
@@ -105,7 +109,7 @@ var saveTweets = function(data, next) {
         }
         else if (typeof user !== 'undefined' && user !== null) {
             // iterate over every tweet and check if it's new
-            async.forEachSeries(data.tweets, function (tweetData, asyncCallback) {
+            async.forEachSeries(data.tweets, function (tweetData, callback) {
                 var tweet,
                     retweet_user;
 
@@ -133,53 +137,72 @@ var saveTweets = function(data, next) {
                     };
                 }
 
-                Tweet.update({id: tweet.id}, tweet, {upsert: true}, function (error) {
-                    var i, l, t,
-                        found = false;
+                Tweet.update(
+                    {id: tweet.id},
+                    tweet,
+                    {upsert: true},
+                    function (error) {
+                        var i, l, t,
+                            found = false;
 
-                    if (error) {
-                        console.error(new Date(), error);
-                    }
-                    else {
-                        i = user.timeline.length-1;
-                        while (i>0) {
-                            t = user.timeline[i];
-                            if (t.tweet_id.equals(tweet.id)) {
-                                found = true;
-                                break;
+                        if (error) {
+                            console.error(new Date(), error);
+                        }
+                        else {
+                            i = user.timeline.length-1;
+                            while (i>0) {
+                                t = user.timeline[i];
+                                if (t.tweet_id.equals(tweet.id)) {
+                                    found = true;
+                                    break;
+                                }
+                                else if (t.tweet_id.lessThan(tweet.id)) {
+                                    // break because tweet_id from timeline-tweet
+                                    // is older than the ID from the tweet we're
+                                    // looking for
+                                    break;
+                                }
+                                --i;
                             }
-                            else if (t.tweet_id.lessThan(tweet.id)) {
-                                // break because tweet_id from timeline-tweet is
-                                // older than the ID from the tweet we're looking for
-                                break;
+
+                            if (!found) {
+                                console.log(
+                                    user.screenname,
+                                    "push " + tweet.id,
+                                    tweet.created_at
+                                );
+                                user.timeline.push({ 'tweet_id': tweet.id });
+                                addedTweet = true;
                             }
-                            --i;
                         }
 
-                        if (!found) {
-                            console.log(user.screenname, "push " + tweet.id, tweet.created_at);
-                            user.timeline.push({ 'tweet_id': tweet.id });
-                            addedTweet = true;
-                        }
+                        // next iteration in async-series
+                        callback(null);
+                        tweet = null;
+                        retweet_user = null;
                     }
-
-                    // next iteration in async-series
-                    asyncCallback(null);
-                    tweet = null;
-                    retweet_user = null;
-                });
-            }, function (asyncError) {
+                );
+            },
+            // async done callback
+            function (asyncError) {
                 if (addedTweet) {
                     // save user regardless of occuring error
                     user.save(function(errorSave) {
                         if (errorSave) {
-                            console.error(new Date(), user.screenname, errorSave);
+                            console.error(
+                                new Date(),
+                                user.screenname,
+                                errorSave
+                            );
                         }
                         else {
                             console.log("user updated ... " + user.screenname);
                         }
                         next();
                     });
+                }
+                else {
+                    next();
                 }
             });
         }

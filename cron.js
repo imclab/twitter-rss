@@ -38,7 +38,6 @@ module.exports = function (api) {
                 console.log("no users found -> stop");
             }
         });
-
     };
 
     return {
@@ -49,8 +48,7 @@ module.exports = function (api) {
                 function () {/* This function is executed when the job stops */},
                 true /* Start the job right now */
             );
-        },
-        debug: run
+        }
     };
 
 };

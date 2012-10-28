@@ -4,21 +4,22 @@
 module.exports = function(oa) {
     var db = require('../db'),
         User = db.User,
-        io = require('./io');
+        io = require('./io'),
+        apiUrl = 'https://api.twitter.com/';
 
-    var auth = function(req, res) {
-        oa.getOAuthRequestToken(function (error, oauth_token, oauth_token_secret, results){
+    var auth = function(req, res, next) {
+        oa.getOAuthRequestToken(function (error, token, tokenSecret, results) {
             if (error) {
                 console.error(new Date(), error);
-                res.send(404, "yeah no. didn't work.");
+                next(new Error("yeah no. didn't work."));
             }
             else {
                 req.session.oauth = {};
-                req.session.oauth.token = oauth_token;
-                req.session.oauth.token_secret = oauth_token_secret;
-                console.log('oauth.token: ' + req.session.oauth.token);
-                console.log('oauth.token_secret: ' + req.session.oauth.token_secret);
-                res.redirect('https://api.twitter.com/oauth/authenticate?oauth_token='+oauth_token);
+                req.session.oauth.token = token;
+                req.session.oauth.tokenSecret = tokenSecret;
+                console.log('token: ' + req.session.oauth.token);
+                console.log('tokenSecret: ' + req.session.oauth.tokenSecret);
+                res.redirect(apiUrl + 'oauth/authenticate?oauth_token=' + token);
             }
         });
     };
@@ -26,35 +27,35 @@ module.exports = function(oa) {
     var authCallback = function(req, res, next) {
         if (req.session.oauth) {
             req.session.oauth.verifier = req.query.oauth_verifier;
-            oa.getOAuthAccessToken(req.session.oauth.token,
-                req.session.oauth.token_secret,
+
+            oa.getOAuthAccessToken(
+                req.session.oauth.token,
+                req.session.oauth.tokenSecret,
                 req.session.oauth.verifier,
-                function (error, oauth_access_token, oauth_access_token_secret, results) {
+                function (error, accessToken, accessTokenSecret, data) {
                     if (error) {
                         console.error(new Date(), error);
-                        res.send(404, "something broke.");
+                        next(new Error("something broke."));
                     }
                     else {
-                        req.session.oauth.access_token = oauth_access_token;
-                        req.session.oauth.access_token_secret = oauth_access_token_secret;
+                        req.session.oauth.accessToken = accessToken;
+                        req.session.oauth.accessTokenSecret = accessTokenSecret;
 
-                        User.findOne({id:results.user_id}, function (err, user) {
+                        User.findOne({id: data.user_id}, function (err, user) {
                             if (typeof user === 'undefined' || user === null) {
-                                console.log("user not found -> " + results.screen_name);
+                                // user not found -> create
                                 user = new User({
-                                    id: db.Long.fromString(results.user_id),
-                                    screenname: results.screen_name,
-                                    oauth_token: oauth_access_token,
-                                    oauth_secret: oauth_access_token_secret,
+                                    id: db.Long.fromString(data.user_id),
+                                    screenname: data.screen_name,
+                                    oauth_token: accessToken,
+                                    oauth_secret: accessTokenSecret,
                                     lastGReaderTweet: 0
                                 });
                             }
                             else {
-                                console.log("1) user found -> " + results.screen_name);
-
-                                // update token
-                                user.oauth_token = oauth_access_token;
-                                user.oauth_secret = oauth_access_token_secret;
+                                // user found -> update token
+                                user.oauth_token = accessToken;
+                                user.oauth_secret = accessTokenSecret;
                             }
 
                             // save user to session
@@ -62,7 +63,11 @@ module.exports = function(oa) {
 
                             user.save(function (err2) {
                                 if (err2) {
-                                    console.error(new Date(), "error while trying to save new user to DB :: ", err2);
+                                    console.error(
+                                        new Date(),
+                                        "error while saving new user to DB",
+                                        err2
+                                    );
                                 }
                                 res.redirect('/');
                             });
@@ -77,7 +82,7 @@ module.exports = function(oa) {
     };
 
     var getHomeTimeline = function(user, callback) {
-        var url = 'https://api.twitter.com/1.1/statuses/home_timeline.json',
+        var url = apiUrl + '1.1/statuses/home_timeline.json',
             lastTweet;
 
         if (user.timeline && user.timeline.length > 0) {
@@ -92,7 +97,7 @@ module.exports = function(oa) {
                 console.error(new Date(), user.screenname, error);
             }
             else {
-                // replace 'type' with 'media_type' otherwise conflicts w/ mongoose
+                // replace 'type' with 'media_type' b/c conflicts w/ mongoose
                 data = data.replace(/"type":/g, '"media_type":');
                 data = JSON.parse(data);
                 data.reverse(); // sort: old -> new
