@@ -4,11 +4,11 @@
 exports.ensureAuthenticated = function(req, res, next) {
     if (req.session &&
         req.session.oauth &&
-        req.session.oauth.access_token &&
-        req.session.oauth.access_token_secret) {
+        req.session.oauth.accessToken &&
+        req.session.oauth.accessTokenSecret) {
         next();
     }
     else {
-        res.redirect('/auth/twitter');
+        res.redirect('/auth');
     }
 };
