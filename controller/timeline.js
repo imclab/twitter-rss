@@ -12,20 +12,31 @@ module.exports = function(oa) {
         var i, l,
             url, user, media,
             r, replaces = [],
-            html, title;
+            html, title,
+            instagramRgx = /http:\/\/(instagr\.am|instagram\.com)\/p\/([A-Za-z0-9\-_]+)\//g,
+            match, temp;
 
         html = title = tweet.text;
 
         if (tweet.entities.urls.length > 0) {
             for (i=0,l=tweet.entities.urls.length;i<l;++i) {
                 url = tweet.entities.urls[i];
-                replaces.push({
+
+                temp = {
                     type: 'url',
                     start: url.indices[0],
                     end: url.indices[1],
                     content: url.expanded_url,
                     html: '<a href="'+url.expanded_url+'">'+url.expanded_url+'</a>'
-                });
+                };
+
+                // look for instagram URLs like e.g. http://instagr.am/p/<ID>/
+                match = instagramRgx.exec(url.expanded_url);
+                if (match !== null) {
+                    temp.html = '<p><img src="http://instagr.am/p/'+match[2]+'/media/?size=l"></p>';
+                }
+
+                replaces.push(temp);
             }
         }
         if (tweet.entities.user_mentions.length > 0) {
@@ -83,10 +94,10 @@ module.exports = function(oa) {
         return str.slice(0, start) + s + str.slice(end);
     };
 
-    var saveTweetsToUser = function(tweets, user) {
+    var saveTweetsToUser = function(tweets, user, callback) {
         var addedTweet = false;
         // iterate over every tweet and check if it's new
-        async.forEachSeries(tweets, function (tweetData, cb) {
+        async.forEachSeries(tweets, function (tweetData, asyncCallback) {
             var tweet,
                 retweet_user;
 
@@ -144,7 +155,7 @@ module.exports = function(oa) {
                     }
                 }
 
-                cb(null);
+                asyncCallback(null);
                 tweet = null;
                 retweet_user = null;
             });
@@ -163,6 +174,7 @@ module.exports = function(oa) {
                     else {
                         console.log("user updated ... " + user.screenname);
                     }
+                    callback();
                 });
             }
 
@@ -193,10 +205,11 @@ module.exports = function(oa) {
                     // parse and save data to DB
                     data = JSON.parse(data);
                     data.reverse();
-                    saveTweetsToUser(data, user);
+                    saveTweetsToUser(data, user, function () {
+                        // tell cron to fetch next user from twitter
+                        callback(null);
+                    });
                 }
-                // tell cron to fetch next user from twitter
-                callback(null);
             });
         },
 
