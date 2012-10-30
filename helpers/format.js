@@ -7,6 +7,7 @@ var formatTweet = exports.formatTweet = function(tweet) {
         r, replaces = [],
         html, title,
         instagramRgx = /(https?:\/\/)?(instagr)(\.am|am\.com)\/p\/([\w\-_]+)\//gi,
+        twitpicRgx = /(https?:\/\/)?(twitpic.com)\/([\w\-_]+)/gi,
         imageRgx = /(https?:\/\/)?((www\.)?[\w\-_\.]+\.[a-z]+\/((([\w\-_\/]+)\/)?[\w\-_\.]+\.(png|gif|jpe?g)))/gi,
         match, temp,
         imageUrl, images = [];
@@ -28,7 +29,13 @@ var formatTweet = exports.formatTweet = function(tweet) {
             // look for instagram URLs like e.g. http://instagr.am/p/<ID>/
             match = instagramRgx.exec(url.expanded_url);
             if (match !== null) {
-                temp.html = '<p><img src="http://instagr.am/p/'+match[2]+'/media/?size=m"></p>';
+                temp.html = '<p><img src="http://instagr.am/p/'+match[4]+'/media/?size=m"></p>';
+            }
+
+            // look for twitpic URLs like e.g. http://twitpic.com/b8a74j
+            match = twitpicRgx.exec(url.expanded_url);
+            if (match !== null) {
+                temp.html = '<p><a href="http://twitpic.com/show/full/'+match[3]+'"><img src="http://twitpic.com/show/thumb/'+match[3]+'"></a></p>';
             }
 
             // look for linked images
