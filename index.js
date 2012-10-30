@@ -1,7 +1,6 @@
 /*jslint node: true */
 "use strict";
 
-
 var express = require('express');
 var engine = require('ejs-locals'); // needed to use layout.ejs in express 3.x
 var app = express();
@@ -23,13 +22,12 @@ function initApplication() {
         config.twitter.authCallback,
         "HMAC-SHA1"
     );
-    var middle = require('./middleware');
-    var auth = require('./controller/auth')(oa);
-    var timeline = require('./controller/timeline')(oa);
+    var api = require('./controller/twitter')(oa);
+    var io = require('./controller/io');
+    var cron = require('./cron')(api);
+    var helper = require('./helpers/format');
 
-    var cron = require('./cron')(oa, timeline);
-
-    console.log("connected to DB -> initApplication");
+    console.log("connected to DB -> initApplication()");
 
     // use ejs-locals for all ejs templates:
     app.engine('ejs', engine);
@@ -38,6 +36,12 @@ function initApplication() {
 
     app.use(express.bodyParser());
     app.use(express.cookieParser(config.app.cookie.secret));
+    // locals
+    app.use(function(req, res, next) {
+        // view helpers
+        res.locals.formatTweet = helper.formatTweet;
+        next();
+    });
     app.use(express.session());
     app.use(app.router);
     app.use(express.static('public'));
@@ -47,15 +51,14 @@ function initApplication() {
         res.send(500, { error: 'Sorry something bad happened! ' + err });
     });
 
-
     // Routes
     app.get('/', function(req, res) {
         res.render('index', { user: req.session.user });
     });
-    app.get('/auth/twitter', auth.twitterAuth);
-    app.get('/auth/twitter/callback', auth.twitterAuthCallback);
-    app.get('/auth/logout', auth.logout);
-    app.get('/rss/:userid', timeline.getUserFeed);
+    app.get('/auth', api.auth);
+    app.get('/auth/callback', api.authCallback);
+    app.get('/auth/logout', api.logout);
+    app.get('/rss/:userid', io.getFeedForUser);
 
     app.listen(3000);
     console.log('Listening on port 3000', process.pid);
