@@ -49,7 +49,8 @@ module.exports = function(oa) {
                                     screenname: data.screen_name,
                                     oauth_token: accessToken,
                                     oauth_secret: accessTokenSecret,
-                                    lastGReaderTweet: 0
+                                    lastGReaderTweet: 0,
+                                    timeline: []
                                 });
                             }
                             else {
@@ -69,6 +70,9 @@ module.exports = function(oa) {
                                         err2
                                     );
                                 }
+                                else {
+                                    console.log("user added/updated > " + user.screenname);
+                                }
                                 res.redirect('/');
                             });
                         });
@@ -87,7 +91,7 @@ module.exports = function(oa) {
 
         if (user.timeline && user.timeline.length > 0) {
             lastTweet = user.timeline[user.timeline.length-1];
-            url += '?since_id=' + lastTweet.tweet_id;
+            url += '?since_id=' + lastTweet;
         }
 
         console.log(user.screenname, "getHomeTimeline() " + url);

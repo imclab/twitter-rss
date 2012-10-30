@@ -32,7 +32,7 @@ var getUserFeed = function(req, res, next) {
                 if (isFeedfetcher) {
                     console.log(new Date(), 'getUserFeed() Google Feedfetcher');
                     lastTweet = user.timeline[user.timeline.length-1];
-                    user.lastGReaderTweet = lastTweet.tweet_id;
+                    user.lastGReaderTweet = lastTweet;
                     user.save(function (err) {
                         if (err) {
                             console.error(
@@ -48,7 +48,7 @@ var getUserFeed = function(req, res, next) {
                 if (isFeedfetcher && lastGReaderTweet > 0) {
                     i = user.timeline.length-1;
                     do {
-                        id = user.timeline[i].tweet_id;
+                        id = user.timeline[i];
                         ids.push(id);
                         --i;
                         if (i < 0) {
@@ -66,7 +66,7 @@ var getUserFeed = function(req, res, next) {
                     i = l-1;
                     l = (l < 50) ? 0 : l-50; // max 50 tweets
                     while (i>l) {
-                        ids.push(user.timeline[i].tweet_id);
+                        ids.push(user.timeline[i]);
                         --i;
                     }
                 }
@@ -100,7 +100,9 @@ var getUserFeed = function(req, res, next) {
 };
 
 var saveTweets = function(data, next) {
-    var addedTweet = false;
+    var addedTweet;
+
+    console.log("saveTweets() userId: " + data.userId);
 
     // get user by ID
     User.findOne({id:data.userId}, function (error, user) {
@@ -108,6 +110,8 @@ var saveTweets = function(data, next) {
             console.error(new Date(), error);
         }
         else if (typeof user !== 'undefined' && user !== null) {
+            addedTweet = false;
+            console.log("saveTweets() user found: " + user.screenname);
             // iterate over every tweet and check if it's new
             async.forEachSeries(data.tweets, function (tweetData, callback) {
                 var tweet,
@@ -152,11 +156,11 @@ var saveTweets = function(data, next) {
                             i = user.timeline.length-1;
                             while (i>0) {
                                 t = user.timeline[i];
-                                if (t.tweet_id.equals(tweet.id)) {
+                                if (t.equals(tweet.id)) {
                                     found = true;
                                     break;
                                 }
-                                else if (t.tweet_id.lessThan(tweet.id)) {
+                                else if (t.lessThan(tweet.id)) {
                                     // break because tweet_id from timeline-tweet
                                     // is older than the ID from the tweet we're
                                     // looking for
@@ -171,7 +175,7 @@ var saveTweets = function(data, next) {
                                     "push " + tweet.id,
                                     tweet.created_at
                                 );
-                                user.timeline.push({ 'tweet_id': tweet.id });
+                                user.timeline.push(tweet.id);
                                 addedTweet = true;
                             }
                         }
@@ -185,6 +189,7 @@ var saveTweets = function(data, next) {
             },
             // async done callback
             function (asyncError) {
+                console.log("saveTweets() async done > " + user.screenname + " save? " + addedTweet);
                 if (addedTweet) {
                     // save user regardless of occuring error
                     user.save(function(errorSave) {
