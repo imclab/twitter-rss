@@ -1,6 +1,6 @@
 # Tweet / Feed / Read
 
-Read your Twitter timeline as an RSS-feed — because I really like GoogleReader.
+Read your Twitter timeline as an RSS-feed
 
 ## Dependencies
 
