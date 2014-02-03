@@ -1,6 +1,6 @@
 {
   "name": "TweetFeedRead",
-  "version": "0.0.1",
+  "version": "0.0.5",
   "description": "Read your Twitter timeline as an RSS-feed",
 
   "keywords": [
