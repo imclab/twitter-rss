@@ -15,6 +15,7 @@ var userSchema = new mongoose.Schema({
     screenname: String,
     oauth_token: String,
     oauth_secret: String,
+    session: {type: String, unique: true},
     timeline: [Long],
     lastGReaderTweet: Long
 });
