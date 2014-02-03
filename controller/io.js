@@ -27,10 +27,10 @@ var getUserFeed = function(req, res, next) {
             if (user !== null && user.timeline && user.timeline.length > 0) {
                 lastGReaderTweet = user.lastGReaderTweet;
 
-                // check if google reader feedfetcher
-                isFeedfetcher = userAgent.indexOf('Feedfetcher-Google') !== -1;
+                // check if fever feedfetcher
+                isFeedfetcher = userAgent.indexOf('Fever Refresh Cron') !== -1;
                 if (isFeedfetcher) {
-                    console.log(new Date(), 'getUserFeed() Google Feedfetcher');
+                    console.log(new Date(), 'getUserFeed() Fever Refresh Cron');
                     lastTweet = user.timeline[user.timeline.length-1];
                     user.lastGReaderTweet = lastTweet;
                     user.save(function (err) {

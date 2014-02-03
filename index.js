@@ -26,6 +26,7 @@ function initApplication() {
     var io = require('./controller/io');
     var cron = require('./cron')(api);
     var helper = require('./helpers/format');
+    var User = db.User;
 
     console.log("connected to DB -> initApplication()");
 
@@ -52,8 +53,24 @@ function initApplication() {
     });
 
     // Routes
-    app.get('/', function(req, res) {
-        res.render('index', { user: req.session.user });
+    app.get('/', function(req, res, next) {
+        if (typeof req.session.user === "undefined" &&
+            typeof req.cookies["tfr-session"] !== "undefined") {
+            User.findOne({session: req.cookies["tfr-session"]}, function (err, user) {
+                if (err) {
+                    console.error(new Date(), err);
+                    next(new Error('auth check failed (1)'));
+                }
+
+                if (typeof user !== 'undefined' && user !== null) {
+                    req.session.user = user;
+                }
+
+                res.render('index', { user: req.session.user });
+            });
+        } else {
+            res.render('index', { user: req.session.user });
+        }
     });
     app.get('/auth', api.auth);
     app.get('/auth/callback', api.authCallback);

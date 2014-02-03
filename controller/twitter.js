@@ -1,6 +1,15 @@
 /*jslint node: true */
 "use strict";
 
+var crypto = require('crypto');
+
+var generate_key = function() {
+    var sha = crypto.createHash('sha256');
+
+    sha.update(Math.random().toString());
+    return sha.digest('hex');
+};
+
 module.exports = function(oa) {
     var db = require('../db'),
         User = db.User,
@@ -42,6 +51,8 @@ module.exports = function(oa) {
                         req.session.oauth.accessTokenSecret = accessTokenSecret;
 
                         User.findOne({id: data.user_id}, function (err, user) {
+                            var newSession = generate_key();
+
                             if (typeof user === 'undefined' || user === null) {
                                 // user not found -> create
                                 user = new User({
@@ -50,6 +61,7 @@ module.exports = function(oa) {
                                     oauth_token: accessToken,
                                     oauth_secret: accessTokenSecret,
                                     lastGReaderTweet: 0,
+                                    session: newSession,
                                     timeline: []
                                 });
                             }
@@ -57,10 +69,16 @@ module.exports = function(oa) {
                                 // user found -> update token
                                 user.oauth_token = accessToken;
                                 user.oauth_secret = accessTokenSecret;
+                                user.session = newSession;
                             }
 
                             // save user to session
                             req.session.user = user;
+
+                            // save session to cookie
+                            res.cookie('tfr-session', newSession, {
+                                maxAge: 60 * 1000 * 60 * 24 * 365
+                            });
 
                             user.save(function (err2) {
                                 if (err2) {
@@ -114,8 +132,26 @@ module.exports = function(oa) {
     };
 
     var logout = function(req, res, next) {
-        delete req.session.user;
-        res.redirect('/');
+        User.findOne({id: req.session.user.id}, function (err, user) {
+            if (err) {
+                console.error(new Date(), err);
+                next(new Error('logout failed (1)'));
+            }
+
+            user.session = null;
+
+            user.save(function(err) {
+                if (err) {
+                    console.error(new Date(), err);
+                    next(new Error('logout failed (2)'));
+                }
+
+                delete req.session.user;
+                res.clearCookie('tfr-session');
+
+                res.redirect('/');
+            });
+        });
     };
 
     // public methods
