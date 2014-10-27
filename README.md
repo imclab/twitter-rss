@@ -22,8 +22,8 @@ Read your Twitter timeline as an RSS-feed
 
   1. [install node.js](https://github.com/joyent/node/wiki/Installation)
   2. [install mongoDB](http://www.mongodb.org/display/DOCS/Quickstart)
-  3. clone repository `git clone https://github.com/pkyeck/tweet-feed-read.git`
-  4. go into folder `cd tweet-feed-read`
+  3. clone repository `git clone https://github.com/pkyeck/twitter-rss.git`
+  4. go into folder `cd twitter-rss`
   5. run `npm install` to install packages
   6. rename `config.example.js` to `config.js`
   7. insert your data into `config.js`
